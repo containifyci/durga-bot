@@ -19,6 +19,9 @@ func main() {
 	durgabot := build.NewGoLibraryBuild("durga-bot")
 	durgabot.Folder = "."
 	durgabot.File = "cmd/durga-bot/main.go"
+	durgabot.Properties = map[string]*build.ListValue{
+		"goreleaser": build.NewList("true"),
+	}
 
 	//TODO: adjust the registries to your own container registry
 	build.BuildGroups(
