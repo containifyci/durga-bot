@@ -1,0 +1,21 @@
+version: 2
+
+builds:
+  - id: durgabot
+    binary: durgabot
+    env:
+      - CGO_ENABLED=0
+    main: ./cmd/durga-bot/main.go
+    goos:
+      - linux
+      - darwin
+
+archives:
+  - id: durgabot
+    builds: [durgabot]
+    formats: [binary]
+    name_template: >-
+      {{ .Binary }}_
+      {{- .Os }}_
+      {{- .Arch }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
