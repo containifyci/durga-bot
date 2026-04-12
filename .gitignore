@@ -1,0 +1,11 @@
+#
+# OS
+#
+.DS_Store
+
+# build
+artifacts.txt
+build/
+coverage.txt
+durga-bot-darwin-arm64
+trivy.json

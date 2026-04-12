@@ -1,0 +1,20 @@
+mode: set
+github.com/containifyci/durga-bot/cmd/durga-bot/main.go:27.13,29.36 1 0
+github.com/containifyci/durga-bot/cmd/durga-bot/main.go:29.36,29.64 1 0
+github.com/containifyci/durga-bot/cmd/durga-bot/main.go:31.2,31.22 1 0
+github.com/containifyci/durga-bot/cmd/durga-bot/main.go:34.29,36.12 2 1
+github.com/containifyci/durga-bot/cmd/durga-bot/main.go:36.12,36.35 1 1
+github.com/containifyci/durga-bot/cmd/durga-bot/main.go:38.2,39.9 2 1
+github.com/containifyci/durga-bot/cmd/durga-bot/main.go:40.24,40.24 0 1
+github.com/containifyci/durga-bot/cmd/durga-bot/main.go:43.2,43.16 1 1
+github.com/containifyci/durga-bot/cmd/durga-bot/main.go:43.16,45.3 1 1
+github.com/containifyci/durga-bot/cmd/durga-bot/main.go:46.2,46.10 1 1
+github.com/containifyci/durga-bot/cmd/durga-bot/main.go:49.27,55.16 3 1
+github.com/containifyci/durga-bot/cmd/durga-bot/main.go:55.16,58.3 2 1
+github.com/containifyci/durga-bot/cmd/durga-bot/main.go:60.2,68.55 3 1
+github.com/containifyci/durga-bot/cmd/durga-bot/main.go:68.55,73.3 1 1
+github.com/containifyci/durga-bot/cmd/durga-bot/main.go:75.2,80.16 2 1
+github.com/containifyci/durga-bot/cmd/durga-bot/main.go:80.16,83.3 2 1
+github.com/containifyci/durga-bot/cmd/durga-bot/main.go:84.2,95.34 5 1
+github.com/containifyci/durga-bot/cmd/durga-bot/main.go:95.34,98.3 2 1
+github.com/containifyci/durga-bot/cmd/durga-bot/main.go:99.2,99.12 1 1
