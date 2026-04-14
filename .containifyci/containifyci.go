@@ -20,7 +20,8 @@ func main() {
 	durgabot.Folder = "."
 	durgabot.File = "cmd/durga-bot/main.go"
 	durgabot.Properties = map[string]*build.ListValue{
-		"goreleaser": build.NewList("true"),
+		"goreleaser":      build.NewList("true"),
+		"goreleaser_envs": build.NewList("MACOS_SIGN_PASSWORD", "MACOS_SIGN_P12", "MACOS_NOTARY_ISSUER_ID", "MACOS_NOTARY_KEY_ID", "MACOS_NOTARY_KEY"),
 	}
 
 	//TODO: adjust the registries to your own container registry
