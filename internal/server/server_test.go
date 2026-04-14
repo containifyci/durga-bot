@@ -1,8 +1,6 @@
 package server
 
 import (
-	"io"
-	"log/slog"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -11,22 +9,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/containifyci/durga-bot/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-func noopLogger() *slog.Logger {
-	return slog.New(slog.NewTextHandler(io.Discard, nil))
-}
-
-func freePort(t *testing.T) string {
-	t.Helper()
-	l, err := net.Listen("tcp", ":0")
-	require.NoError(t, err)
-	port := l.Addr().(*net.TCPAddr).Port
-	require.NoError(t, l.Close())
-	return strconv.Itoa(port)
-}
 
 func TestNewMux_RegistersWebhookRoute(t *testing.T) {
 	t.Parallel()
@@ -67,7 +53,7 @@ func TestNew_SetsFields(t *testing.T) {
 	t.Parallel()
 
 	handler := http.NewServeMux()
-	logger := noopLogger()
+	logger := testutil.DiscardLogger()
 	srv := New(handler, "9090", logger)
 
 	assert.NotNil(t, srv)
@@ -85,7 +71,7 @@ func TestRun_PortInUse(t *testing.T) {
 	port := strconv.Itoa(listener.Addr().(*net.TCPAddr).Port)
 
 	mux := http.NewServeMux()
-	srv := New(mux, port, noopLogger())
+	srv := New(mux, port, testutil.DiscardLogger())
 
 	err = srv.Run()
 	assert.Error(t, err)
@@ -93,7 +79,7 @@ func TestRun_PortInUse(t *testing.T) {
 
 //nolint:paralleltest // sends SIGINT to the process
 func TestRun_ShutdownError(t *testing.T) {
-	port := freePort(t)
+	port := testutil.FreePort(t)
 
 	// Handler that blocks long enough for the tiny shutdown timeout to expire.
 	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -103,7 +89,7 @@ func TestRun_ShutdownError(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.Handle("POST /webhooks/github", handler)
 
-	srv := New(mux, port, noopLogger())
+	srv := New(mux, port, testutil.DiscardLogger())
 	srv.shutdownTimeout = 1 * time.Millisecond
 
 	errCh := make(chan error, 1)
@@ -137,14 +123,14 @@ func TestRun_ShutdownError(t *testing.T) {
 
 //nolint:paralleltest // sends SIGINT to the process
 func TestRun_GracefulShutdown(t *testing.T) {
-	port := freePort(t)
+	port := testutil.FreePort(t)
 	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
 	mux := http.NewServeMux()
 	mux.Handle("POST /webhooks/github", handler)
 
-	srv := New(mux, port, noopLogger())
+	srv := New(mux, port, testutil.DiscardLogger())
 
 	errCh := make(chan error, 1)
 	go func() { errCh <- srv.Run() }()

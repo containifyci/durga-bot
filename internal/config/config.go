@@ -48,7 +48,8 @@ func (p *pemBytes) UnmarshalEnvironmentValue(data string) error {
 type rawConfig struct {
 	Port                string   `env:"PORT,default=8080"`
 	GitHubWebhookSecret string   `env:"GITHUB_WEBHOOK_SECRET"`
-	TemporalHost        string   `env:"TEMPORAL_HOST,default=localhost:7233"`
+	SecretOperatorHost  string   `env:"SECRET_OPERATOR_HOST,default=http://localhost:9999"`
+	GitHubVariableName  string   `env:"GITHUB_VARIABLE_NAME,default=SECRET_OPERATOR_TOKENS"`
 	GitHubPrivateKey    pemBytes `env:"GITHUB_PRIVATE_KEY"`
 	LogLevel            logLevel `env:"LOG_LEVEL,default=INFO"`
 	GitHubAppID         int64    `env:"GITHUB_APP_ID"`
@@ -59,7 +60,8 @@ type rawConfig struct {
 type Config struct {
 	Port                string
 	GitHubWebhookSecret string
-	TemporalHost        string
+	SecretOperatorHost  string
+	GitHubVariableName  string
 	GitHubPrivateKey    []byte
 	GitHubInstallID     int64
 	GitHubAppID         int64
@@ -97,7 +99,8 @@ func Load() (*Config, error) {
 		GitHubPrivateKey:    []byte(raw.GitHubPrivateKey),
 		GitHubWebhookSecret: strings.TrimSpace(raw.GitHubWebhookSecret),
 		LogLevel:            raw.LogLevel.Level,
-		TemporalHost:        raw.TemporalHost,
+		SecretOperatorHost:  raw.SecretOperatorHost,
+		GitHubVariableName: raw.GitHubVariableName,
 	}
 
 	return cfg, nil

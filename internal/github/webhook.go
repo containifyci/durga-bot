@@ -6,31 +6,30 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
+	"github.com/containifyci/durga-bot/internal/token"
 	gh "github.com/google/go-github/v67/github"
 )
-
-// TokenClient creates tokens for services.
-type TokenClient interface {
-	CreateToken(ctx context.Context, service string) error
-}
 
 // Handler receives GitHub webhook events, validates the HMAC signature,
 // and acknowledges them with HTTP 200.
 type Handler struct {
-	token         TokenClient
+	token         token.Client
+	ghClient      *gh.Client
 	logger        *slog.Logger
 	webhookSecret []byte
 }
 
 // NewHandler creates a webhook Handler.
 // tokenClient may be nil; in that case token creation is skipped.
-func NewHandler(webhookSecret string, logger *slog.Logger, tokenClient TokenClient) *Handler {
+func NewHandler(webhookSecret string, logger *slog.Logger, tokenClient token.Client, ghClient *gh.Client) *Handler {
 	return &Handler{
 		webhookSecret: []byte(webhookSecret),
 		logger:        logger,
 		token:         tokenClient,
+		ghClient:      ghClient,
 	}
 }
 
@@ -67,15 +66,40 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	)
 
 	if h.token != nil {
-		repoName := extractRepoName(payload)
-		name := eventType + ":" + repoName
-		
+		wp := extractWebhookPayload(payload)
+		owner, repoName, ok := strings.Cut(wp.Repository.FullName, "/")
+		if !ok {
+			h.logger.Warn("skipping token creation: could not parse repo name",
+				slog.String("full_name", wp.Repository.FullName),
+			)
+			w.WriteHeader(http.StatusOK)
+			_, _ = io.WriteString(w, "event received")
+			return
+		}
+
 		go func() { //nolint:contextcheck // intentionally detached from request context for fire-and-forget
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 			defer cancel()
-			if err := h.token.CreateToken(ctx, name); err != nil {
+
+			serviceName, err := ResolveServiceName(ctx, h.ghClient, owner, repoName)
+			if err != nil {
+				h.logger.Error("failed to resolve service name",
+					slog.String("repo", wp.Repository.FullName),
+					slog.String("error", err.Error()),
+				)
+				return
+			}
+
+			req := token.TokenRequest{
+				ServiceName: serviceName,
+				RepoOwner:   owner,
+				RepoName:    repoName,
+				PRNumber:    wp.Number,
+			}
+			if err := h.token.CreateToken(ctx, req); err != nil {
 				h.logger.Error("failed to create token",
-					slog.String("service", name),
+					slog.String("service", serviceName),
+					slog.String("repo", wp.Repository.FullName),
 					slog.String("error", err.Error()),
 				)
 			}
@@ -86,16 +110,20 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	_, _ = io.WriteString(w, "event received")
 }
 
-type repoPayload struct {
+type webhookPayload struct {
 	Repository struct {
 		FullName string `json:"full_name"`
 	} `json:"repository"`
+	Number int `json:"number"`
 }
 
-func extractRepoName(payload []byte) string {
-	var rp repoPayload
-	if err := json.Unmarshal(payload, &rp); err != nil || rp.Repository.FullName == "" {
-		return "unknown"
+func extractWebhookPayload(payload []byte) webhookPayload {
+	var wp webhookPayload
+	if err := json.Unmarshal(payload, &wp); err != nil {
+		return webhookPayload{}
 	}
-	return rp.Repository.FullName
+	if wp.Repository.FullName == "" {
+		wp.Repository.FullName = "unknown"
+	}
+	return wp
 }
