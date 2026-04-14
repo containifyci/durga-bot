@@ -1,10 +1,6 @@
 package main
 
 import (
-	"crypto/rand"
-	"crypto/rsa"
-	"crypto/x509"
-	"encoding/pem"
 	"net"
 	"net/http"
 	"strconv"
@@ -12,29 +8,14 @@ import (
 	"testing"
 	"time"
 
+	"log/slog"
+
+	"github.com/containifyci/durga-bot/internal/testutil"
 	"github.com/containifyci/durga-bot/internal/token"
+	gh "github.com/google/go-github/v67/github"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-func generateTestRSAKey(t *testing.T) string {
-	t.Helper()
-	key, err := rsa.GenerateKey(rand.Reader, 2048)
-	require.NoError(t, err)
-	return string(pem.EncodeToMemory(&pem.Block{
-		Type:  "RSA PRIVATE KEY",
-		Bytes: x509.MarshalPKCS1PrivateKey(key),
-	}))
-}
-
-func freePort(t *testing.T) string {
-	t.Helper()
-	l, err := net.Listen("tcp", ":0")
-	require.NoError(t, err)
-	port := l.Addr().(*net.TCPAddr).Port
-	require.NoError(t, l.Close())
-	return strconv.Itoa(port)
-}
 
 func setValidEnv(t *testing.T, pemKey string) {
 	t.Helper()
@@ -46,7 +27,7 @@ func setValidEnv(t *testing.T, pemKey string) {
 
 func newTestApp() app {
 	return app{
-		newTokenCli: func() token.Client { return nil },
+		newTokenCli: func(_ *gh.Client, _, _ string, _ *slog.Logger) token.Client { return nil },
 	}
 }
 
@@ -77,7 +58,7 @@ func TestRun_GitHubClientError(t *testing.T) {
 
 func TestRun_ServerError(t *testing.T) {
 	// Valid config with real RSA key but PORT is already occupied.
-	pemKey := generateTestRSAKey(t)
+	pemKey := string(testutil.GenerateRSAKey(t))
 	setValidEnv(t, pemKey)
 
 	listener, err := net.Listen("tcp", ":0")
@@ -94,8 +75,8 @@ func TestRun_ServerError(t *testing.T) {
 
 //nolint:paralleltest // sends SIGINT to the process and uses t.Setenv
 func TestRun_GracefulShutdown(t *testing.T) {
-	pemKey := generateTestRSAKey(t)
-	port := freePort(t)
+	pemKey := string(testutil.GenerateRSAKey(t))
+	port := testutil.FreePort(t)
 	setValidEnv(t, pemKey)
 	t.Setenv("PORT", port)
 
@@ -140,8 +121,8 @@ func TestAppMain_RunError(t *testing.T) {
 
 //nolint:paralleltest // sends SIGINT to the process and uses t.Setenv
 func TestAppMain_Success(t *testing.T) {
-	pemKey := generateTestRSAKey(t)
-	port := freePort(t)
+	pemKey := string(testutil.GenerateRSAKey(t))
+	port := testutil.FreePort(t)
 	setValidEnv(t, pemKey)
 	t.Setenv("PORT", port)
 	a := newTestApp()

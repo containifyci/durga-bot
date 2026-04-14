@@ -9,10 +9,12 @@ import (
 	githubinternal "github.com/containifyci/durga-bot/internal/github"
 	"github.com/containifyci/durga-bot/internal/server"
 	"github.com/containifyci/durga-bot/internal/token"
+
+	gh "github.com/google/go-github/v67/github"
 )
 
 type app struct {
-	newTokenCli func() token.Client
+	newTokenCli func(ghClient *gh.Client, secretOperatorHost, variableName string, logger *slog.Logger) token.Client
 }
 
 // @title           Son of Anton GitHub App
@@ -26,7 +28,9 @@ type app struct {
 // @tag.description GitHub webhook event handlers
 func main() {
 	a := app{
-		newTokenCli: func() token.Client { return token.NewClient() },
+		newTokenCli: func(ghClient *gh.Client, secretOperatorHost, variableName string, logger *slog.Logger) token.Client {
+			return token.NewSecretOperatorClient(ghClient, secretOperatorHost, variableName, logger)
+		},
 	}
 	os.Exit(a.appMain())
 }
@@ -35,10 +39,7 @@ func (a *app) appMain() int {
 	runErrCh := make(chan error, 1)
 	go func() { runErrCh <- a.run() }()
 
-	var err error
-	select {
-	case err = <-runErrCh:
-	}
+	err := <-runErrCh
 
 	if err != nil {
 		return 1
@@ -81,12 +82,14 @@ func (a *app) run() error {
 		logger.Error("failed to create GitHub client", slog.String("error", err.Error()))
 		return fmt.Errorf("creating GitHub client: %w", err)
 	}
-	_ = ghClient // available for future use
+
+	tokenCli := a.newTokenCli(ghClient, cfg.SecretOperatorHost, cfg.GitHubVariableName, logger)
 
 	webhookHandler := githubinternal.NewHandler(
 		cfg.GitHubWebhookSecret,
 		logger,
-		a.newTokenCli(),
+		tokenCli,
+		ghClient,
 	)
 
 	mux := server.NewMux(webhookHandler)
